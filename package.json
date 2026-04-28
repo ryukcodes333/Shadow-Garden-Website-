@@ -8,5 +8,6 @@
   },
   "scripts": {
     "start": "node server.mjs"
-  }
+  },
+  "dependencies": {}
 }

@@ -1,9 +1,5 @@
-import { createRequire as __cr } from 'node:module';
-import __p from 'node:path';
-import __u from 'node:url';
-globalThis.require = __cr(import.meta.url);
-globalThis.__filename = __u.fileURLToPath(import.meta.url);
-globalThis.__dirname = __p.dirname(globalThis.__filename);
+import { createRequire as __createRequire } from 'node:module';
+const require = __createRequire(import.meta.url);
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -18555,7 +18551,7 @@ var require_finalhandler = __commonJS({
     module.exports = finalhandler;
     function finalhandler(req, res, options) {
       var opts = options || {};
-      var env = opts.env || process.env.NODE_ENV || "development";
+      var env = opts.env || "production";
       var onerror = opts.onerror;
       return function(err) {
         var headers;
@@ -20903,7 +20899,7 @@ var require_application = __commonJS({
       });
     };
     app2.defaultConfiguration = function defaultConfiguration() {
-      var env = process.env.NODE_ENV || "development";
+      var env = "production";
       this.enable("x-powered-by");
       this.set("etag", "weak");
       this.set("env", env);
@@ -64759,7 +64755,7 @@ var import_mongodb = __toESM(require_lib6(), 1);
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
-var isProduction = process.env.NODE_ENV === "production";
+var isProduction = true;
 var logger = (0, import_pino.default)({
   level: process.env.LOG_LEVEL ?? "info",
   redact: [
@@ -67344,36 +67340,68 @@ router4.post("/relink", async (req, res) => {
 router4.get("/pokemons", async (req, res) => {
   try {
     const u = req.user;
-    const userId = String(u._id);
     const phone = String(u.phone || "");
-    const docs = await coll("user_pokemons");
-    const altIds = [userId];
-    if (phone) {
-      const allDocs = await findAllUserDocsByPhone(phone);
-      for (const d of allDocs) altIds.push(String(d._id));
+    const allDocs = phone.length > 0 ? await findAllUserDocsByPhone(phone) : [];
+    const docs = allDocs.length > 0 ? allDocs : [u];
+    const parseList = (raw) => {
+      if (!raw) return [];
+      let v = raw;
+      if (typeof v === "string") {
+        try {
+          v = JSON.parse(v);
+        } catch {
+          return [];
+        }
+      }
+      return Array.isArray(v) ? v : [];
+    };
+    const items = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const doc of docs) {
+      const raw = doc;
+      const pairs = [
+        ["party", raw.pokemon_party],
+        ["pc", raw.pokemon_pc]
+      ];
+      for (const [slot, payload] of pairs) {
+        const list = parseList(payload);
+        for (let i = 0; i < list.length; i += 1) {
+          const p = list[i];
+          const id = Number(p.id) || 0;
+          if (!id) continue;
+          const level = Number(p.level) || 1;
+          const xp = Number(p.xp) || 0;
+          const dedupKey = `${slot}:${id}:${level}:${xp}:${i}`;
+          if (seen.has(dedupKey)) continue;
+          seen.add(dedupKey);
+          items.push({
+            key: `${slot}-${i}-${id}`,
+            slot,
+            id,
+            name: String(p.name || `pokemon-${id}`),
+            nickname: String(p.nickname || ""),
+            level,
+            xp,
+            hp: Number(p.hp) || 0,
+            max_hp: Number(p.maxHp ?? p.max_hp) || 0,
+            attack: 0,
+            defense: 0,
+            speed: 0,
+            shiny: Boolean(p.shiny),
+            moves: Array.isArray(p.moves) ? p.moves.map(String).slice(0, 4) : [],
+            types: Array.isArray(p.types) ? p.types.map(String) : [],
+            sprite: typeof p.sprite === "string" && p.sprite ? p.sprite : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
+            caught_at: typeof p.caught_at === "number" ? p.caught_at : p.caught_at instanceof Date ? p.caught_at.getTime() : 0
+          });
+        }
+      }
     }
-    const found = await docs.find({ user_id: { $in: Array.from(new Set(altIds)) } }).sort({ level: -1, caught_at: -1 }).limit(500).toArray();
-    res.json({
-      items: found.map((p) => {
-        const id = Number(p.pokemon_id) || 0;
-        return {
-          id,
-          name: String(p.name || p.nickname || `pokemon-${id}`),
-          nickname: String(p.nickname || ""),
-          level: Number(p.level) || 1,
-          xp: Number(p.xp) || 0,
-          hp: Number(p.hp) || 0,
-          max_hp: Number(p.max_hp) || 0,
-          attack: Number(p.attack) || 0,
-          defense: Number(p.defense) || 0,
-          speed: Number(p.speed) || 0,
-          shiny: Boolean(p.shiny),
-          moves: Array.isArray(p.moves) ? p.moves.slice(0, 4) : [],
-          caught_at: typeof p.caught_at === "number" ? p.caught_at : p.caught_at instanceof Date ? p.caught_at.getTime() : 0,
-          sprite: id ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png` : ""
-        };
-      })
+    items.sort((a, b) => {
+      if (a.slot !== b.slot) return a.slot === "party" ? -1 : 1;
+      if (a.slot === "party") return 0;
+      return b.level - a.level;
     });
+    res.json({ items });
   } catch (err) {
     logger.error({ err }, "user pokemons failed");
     res.status(500).json({ error: "user_pokemons_failed" });
@@ -67521,301 +67549,3 @@ app_default.listen(port, (err) => {
     (e) => logger.error({ err: e }, "consolidateAllUsersOnce failed")
   );
 });
-/*! Bundled license information:
-
-depd/index.js:
-  (*!
-   * depd
-   * Copyright(c) 2014-2018 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-statuses/index.js:
-  (*!
-   * statuses
-   * Copyright(c) 2014 Jonathan Ong
-   * Copyright(c) 2016 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-toidentifier/index.js:
-  (*!
-   * toidentifier
-   * Copyright(c) 2016 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-http-errors/index.js:
-  (*!
-   * http-errors
-   * Copyright(c) 2014 Jonathan Ong
-   * Copyright(c) 2016 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-bytes/index.js:
-  (*!
-   * bytes
-   * Copyright(c) 2012-2014 TJ Holowaychuk
-   * Copyright(c) 2015 Jed Watson
-   * MIT Licensed
-   *)
-
-unpipe/index.js:
-  (*!
-   * unpipe
-   * Copyright(c) 2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-raw-body/index.js:
-  (*!
-   * raw-body
-   * Copyright(c) 2013-2014 Jonathan Ong
-   * Copyright(c) 2014-2022 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-ee-first/index.js:
-  (*!
-   * ee-first
-   * Copyright(c) 2014 Jonathan Ong
-   * MIT Licensed
-   *)
-
-on-finished/index.js:
-  (*!
-   * on-finished
-   * Copyright(c) 2013 Jonathan Ong
-   * Copyright(c) 2014 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-content-type/index.js:
-  (*!
-   * content-type
-   * Copyright(c) 2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-mime-db/index.js:
-  (*!
-   * mime-db
-   * Copyright(c) 2014 Jonathan Ong
-   * Copyright(c) 2015-2022 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-mime-types/index.js:
-  (*!
-   * mime-types
-   * Copyright(c) 2014 Jonathan Ong
-   * Copyright(c) 2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-media-typer/index.js:
-  (*!
-   * media-typer
-   * Copyright(c) 2014-2017 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-type-is/index.js:
-  (*!
-   * type-is
-   * Copyright(c) 2014 Jonathan Ong
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-body-parser/lib/read.js:
-body-parser/lib/types/raw.js:
-body-parser/lib/types/text.js:
-body-parser/index.js:
-  (*!
-   * body-parser
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-body-parser/lib/types/json.js:
-body-parser/lib/types/urlencoded.js:
-  (*!
-   * body-parser
-   * Copyright(c) 2014 Jonathan Ong
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-encodeurl/index.js:
-  (*!
-   * encodeurl
-   * Copyright(c) 2016 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-escape-html/index.js:
-  (*!
-   * escape-html
-   * Copyright(c) 2012-2013 TJ Holowaychuk
-   * Copyright(c) 2015 Andreas Lubbe
-   * Copyright(c) 2015 Tiancheng "Timothy" Gu
-   * MIT Licensed
-   *)
-
-parseurl/index.js:
-  (*!
-   * parseurl
-   * Copyright(c) 2014 Jonathan Ong
-   * Copyright(c) 2014-2017 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-finalhandler/index.js:
-  (*!
-   * finalhandler
-   * Copyright(c) 2014-2022 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-express/lib/view.js:
-express/lib/application.js:
-express/lib/request.js:
-express/lib/express.js:
-express/index.js:
-  (*!
-   * express
-   * Copyright(c) 2009-2013 TJ Holowaychuk
-   * Copyright(c) 2013 Roman Shtylman
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-etag/index.js:
-  (*!
-   * etag
-   * Copyright(c) 2014-2016 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-forwarded/index.js:
-  (*!
-   * forwarded
-   * Copyright(c) 2014-2017 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-proxy-addr/index.js:
-  (*!
-   * proxy-addr
-   * Copyright(c) 2014-2016 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-express/lib/utils.js:
-express/lib/response.js:
-  (*!
-   * express
-   * Copyright(c) 2009-2013 TJ Holowaychuk
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-router/lib/layer.js:
-router/lib/route.js:
-router/index.js:
-  (*!
-   * router
-   * Copyright(c) 2013 Roman Shtylman
-   * Copyright(c) 2014-2022 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-negotiator/index.js:
-  (*!
-   * negotiator
-   * Copyright(c) 2012 Federico Romero
-   * Copyright(c) 2012-2014 Isaac Z. Schlueter
-   * Copyright(c) 2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-accepts/index.js:
-  (*!
-   * accepts
-   * Copyright(c) 2014 Jonathan Ong
-   * Copyright(c) 2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-fresh/index.js:
-  (*!
-   * fresh
-   * Copyright(c) 2012 TJ Holowaychuk
-   * Copyright(c) 2016-2017 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-range-parser/index.js:
-  (*!
-   * range-parser
-   * Copyright(c) 2012-2014 TJ Holowaychuk
-   * Copyright(c) 2015-2016 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-content-disposition/index.js:
-  (*!
-   * content-disposition
-   * Copyright(c) 2014-2017 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-cookie/index.js:
-  (*!
-   * cookie
-   * Copyright(c) 2012-2014 Roman Shtylman
-   * Copyright(c) 2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-send/index.js:
-  (*!
-   * send
-   * Copyright(c) 2012 TJ Holowaychuk
-   * Copyright(c) 2014-2022 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-vary/index.js:
-  (*!
-   * vary
-   * Copyright(c) 2014-2017 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-serve-static/index.js:
-  (*!
-   * serve-static
-   * Copyright(c) 2010 Sencha Inc.
-   * Copyright(c) 2011 TJ Holowaychuk
-   * Copyright(c) 2014-2016 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-object-assign/index.js:
-  (*
-  object-assign
-  (c) Sindre Sorhus
-  @license MIT
-  *)
-
-cookie-parser/index.js:
-  (*!
-   * cookie-parser
-   * Copyright(c) 2014 TJ Holowaychuk
-   * Copyright(c) 2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-*/
