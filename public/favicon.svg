@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#1a1f2e"/>
+      <stop offset="100%" stop-color="#05070d"/>
+    </radialGradient>
+    <linearGradient id="hair" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#3a4a6b"/>
+      <stop offset="100%" stop-color="#1b2742"/>
+    </linearGradient>
+    <linearGradient id="cheek" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#ff8aa8"/>
+      <stop offset="100%" stop-color="#ff5c8a"/>
+    </linearGradient>
+    <radialGradient id="eye" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#7be8ff"/>
+      <stop offset="60%" stop-color="#22a3d4"/>
+      <stop offset="100%" stop-color="#0d3a5b"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <!-- back hair -->
+  <path d="M10 36 C10 18, 22 8, 32 8 C42 8, 54 18, 54 36 L54 50 L10 50 Z" fill="url(#hair)"/>
+  <!-- face -->
+  <path d="M16 30 C16 22, 22 16, 32 16 C42 16, 48 22, 48 32 C48 42, 42 48, 32 48 C22 48, 16 40, 16 30 Z" fill="#ffe4cc"/>
+  <!-- side bangs -->
+  <path d="M14 30 C14 16, 22 10, 32 10 C40 10, 48 16, 50 28 C44 24, 38 22, 32 22 C26 22, 20 24, 14 30 Z" fill="url(#hair)"/>
+  <path d="M44 22 C50 26, 52 32, 50 38 C46 32, 44 28, 44 22 Z" fill="url(#hair)"/>
+  <!-- cheeks -->
+  <ellipse cx="22" cy="38" rx="4" ry="2.5" fill="url(#cheek)" opacity="0.85"/>
+  <ellipse cx="42" cy="38" rx="4" ry="2.5" fill="url(#cheek)" opacity="0.85"/>
+  <!-- eyes -->
+  <ellipse cx="24" cy="32" rx="4.5" ry="6" fill="url(#eye)"/>
+  <ellipse cx="40" cy="32" rx="4.5" ry="6" fill="url(#eye)"/>
+  <!-- eye highlight -->
+  <circle cx="22.5" cy="29.5" r="1.6" fill="#fff"/>
+  <circle cx="38.5" cy="29.5" r="1.6" fill="#fff"/>
+  <circle cx="25.5" cy="34" r="0.9" fill="#fff" opacity="0.7"/>
+  <circle cx="41.5" cy="34" r="0.9" fill="#fff" opacity="0.7"/>
+  <!-- mouth -->
+  <path d="M30 41 Q32 43.5 34 41" stroke="#7a3a2a" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+  <!-- shadow rune -->
+  <text x="32" y="60" text-anchor="middle" font-family="serif" font-weight="900" font-size="9" fill="#7be8ff" opacity="0.9">影</text>
+</svg>
