@@ -7,7 +7,7 @@
 ## Quick Start (Local)
 
 1. Copy `.env.example` → `.env` and fill in your values
-2. Run: `node server.mjs`
+2. Run: `node server.cjs`
 3. Open: http://localhost:3000
 
 No `npm install` needed — everything is bundled.
@@ -26,15 +26,16 @@ No `npm install` needed — everything is bundled.
 1. Create a new **Web Service** on Render
 2. Upload / connect this project
 3. Set **Build Command**: *(leave blank)*
-4. Set **Start Command**: `node server.mjs`
+4. Set **Start Command**: `node server.cjs`
 5. Add environment variables from `.env.example`
 6. Deploy!
 
 ## Features
-- Daily rewards with 5-tier streak system
-- Real-time auction house (staff only creates auctions)
+- Daily rewards with 5-tier streak system (coins + gems + XP)
+- Real-time auction house (staff-only creation, Socket.io live bidding)
 - Live card trading market between players
 - Profile background customization
-- Pokémon party/PC management
+- Pokémon party ↔ PC management
 - Global leaderboard, card gallery, shop
-- Socket.io for real-time updates
+- Real Lucide icons (no emoji fallbacks)
+- Mobile-responsive with hamburger nav
