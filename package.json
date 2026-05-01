@@ -1,13 +1,18 @@
 {
   "name": "shadow-garden",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "scripts": {
     "start": "node server.mjs"
   },
-  "dependencies": {}
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "mongodb": "^6.14.0",
+    "socket.io": "^4.8.1"
+  }
 }
